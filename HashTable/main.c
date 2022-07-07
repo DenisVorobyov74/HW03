@@ -123,7 +123,7 @@ void AddToHashPairArray(struct HashPairArray* HashPairArray, char WordArray[Word
 
         HashPairArray->Len += HashPairArray_AdditionStep;
     }
-    // HashPairArray->Array[3]->InitialWord
+
     for(i = 0; i <= HashPairArray->Pointer; i++){
         if(strncmp(HashPairArray->Array[i]->InitialWord, WordArray, *WordLen) == 0){
             IsFound = true;
