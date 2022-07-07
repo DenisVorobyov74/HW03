@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1657154812 source:/home/denis/GitHub/HW03/HashTable/main.c
+	<stdio.h>
+	<stdlib.h>
+	<sys/stat.h>
+	<stdbool.h>
+	<inttypes.h>
+	<string.h>
+
