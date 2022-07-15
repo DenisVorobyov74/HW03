@@ -23,19 +23,6 @@ struct HashPairArray{
 
 };
 
-/*void GetFullPathToFile(int argc, char* argv[], char PathToSrcFile[]);
-void Calculate(FILE* StreamPointer);
-void KeepOpenWindow();
-FILE* OpenFile(char* mPathToFile, const char Mode[]);
-int CloseFile(FILE* mStreamPointer);
-int GetNextWord(FILE* StreamPointer, char WordArray[WordArray_Size]);
-void AddToHashPairArray(struct HashPairArray* HashPairArray, char WordArray[WordArray_Size], int* WordLen);
-void AddNewWord(struct HashPairArray* HashPairArray, char WordArray[WordArray_Size], int* WordLen);
-int64_t GetHash(char WordArray[WordArray_Size], int* WordLen);
-void FreeMemory(struct HashPairArray* HashPairArray);
-void PrintWords(struct HashPairArray* HashPairArray);
-size_t strlcpy(char *dst, const char *src, size_t dsize);*/
-
 void PrintWords(struct HashPairArray* HashPairArray){
 
     printf("\n\n        Word's list:\n");
