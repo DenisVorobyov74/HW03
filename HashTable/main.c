@@ -23,7 +23,7 @@ struct HashPairArray{
 
 };
 
-void GetFullPathToFile(int argc, char* argv[], char PathToSrcFile[]);
+/*void GetFullPathToFile(int argc, char* argv[], char PathToSrcFile[]);
 void Calculate(FILE* StreamPointer);
 void KeepOpenWindow();
 FILE* OpenFile(char* mPathToFile, const char Mode[]);
@@ -34,59 +34,7 @@ void AddNewWord(struct HashPairArray* HashPairArray, char WordArray[WordArray_Si
 int64_t GetHash(char WordArray[WordArray_Size], int* WordLen);
 void FreeMemory(struct HashPairArray* HashPairArray);
 void PrintWords(struct HashPairArray* HashPairArray);
-size_t strlcpy(char *dst, const char *src, size_t dsize);
-
-int main(int argc, char* argv[0])
-{
-    char PathToSrcFile[FileName_Size];
-    FILE* StreamPointer;
-    int Result = 0, CloseResult;
-    _Bool OperationDone = true;
-
-    GetFullPathToFile(argc, argv, PathToSrcFile);
-    StreamPointer = OpenFile(PathToSrcFile, "rb");
-    if(StreamPointer == NULL){
-        perror("Error open source file. Unknown file.\n");
-        OperationDone = false;
-    }
-
-    // Выполняем подсчет
-    if(OperationDone == true){
-        Calculate(StreamPointer);
-    }
-    else
-        Result = 1;
-
-    // Если все прошло хорошо, закрываем файлы.
-    CloseResult = CloseFile(StreamPointer);
-    if(CloseResult == EOF){
-        perror("Error close source file.\n");
-        OperationDone = false;
-    };
-
-    if(OperationDone == true)
-        printf("\nCounting done!");
-
-    KeepOpenWindow();
-
-    return Result;
-}
-
-void Calculate(FILE* StreamPointer){
-
-    int WordLen;
-    char WordArray[WordArray_Size];
-
-    struct HashPairArray* HashPairArray = calloc(1, sizeof(struct HashPairArray));
-    HashPairArray->Pointer = -1;
-
-    while((WordLen = GetNextWord(StreamPointer, WordArray)) > 1)
-        AddToHashPairArray(HashPairArray, WordArray, &WordLen);
-
-    PrintWords(HashPairArray);
-    FreeMemory(HashPairArray);
-
-}
+size_t strlcpy(char *dst, const char *src, size_t dsize);*/
 
 void PrintWords(struct HashPairArray* HashPairArray){
 
@@ -105,6 +53,61 @@ void FreeMemory(struct HashPairArray* HashPairArray){
 
     free(HashPairArray);
     HashPairArray = 0;
+
+}
+
+size_t strlcpy(char *dst, const char *src, size_t dsize) {
+
+	const char *osrc = src;
+	size_t nleft = dsize;
+
+	/* Copy as many bytes as will fit. */
+	if (nleft != 0) {
+		while (--nleft != 0) {
+			if ((*dst++ = *src++) == '\0')
+				break;
+		}
+	}
+
+	/* Not enough room in dst, add NUL and traverse rest of src. */
+	if (nleft == 0) {
+		if (dsize != 0)
+			*dst = '\0';		/* NUL-terminate dst */
+		while (*src++)
+			;
+	}
+
+	return(src - osrc - 1);	/* count does not include NUL */
+}
+
+int64_t GetHash(char WordArray[WordArray_Size], int* WordLen){
+
+    int64_t NewHash = 0, p_pow = 1;
+    const int p = 52;
+    int MaxLen = *WordLen-1;
+
+    for(int i = 0; i < MaxLen; i++){
+        NewHash += (int)WordArray[i] * p_pow;
+        p_pow *= p;
+    }
+
+    return NewHash;
+
+}
+
+void AddNewWord(struct HashPairArray* HashPairArray, char WordArray[WordArray_Size], int* WordLen){
+
+    struct HashPair* Temp = calloc(1, sizeof(struct HashPair));
+
+    HashPairArray->Pointer++;
+    HashPairArray->Array[HashPairArray->Pointer] = Temp;
+
+    Temp->count++;
+
+    Temp->InitialWord = malloc((*WordLen) * sizeof(int));
+    strncpy(Temp->InitialWord, WordArray, *WordLen);
+
+    Temp->Hash = GetHash(WordArray, WordLen);
 
 }
 
@@ -141,37 +144,6 @@ void AddToHashPairArray(struct HashPairArray* HashPairArray, char WordArray[Word
 
 }
 
-void AddNewWord(struct HashPairArray* HashPairArray, char WordArray[WordArray_Size], int* WordLen){
-
-    struct HashPair* Temp = calloc(1, sizeof(struct HashPair));
-
-    HashPairArray->Pointer++;
-    HashPairArray->Array[HashPairArray->Pointer] = Temp;
-
-    Temp->count++;
-
-    Temp->InitialWord = malloc((*WordLen) * sizeof(int));
-    strncpy(Temp->InitialWord, WordArray, *WordLen);
-
-    Temp->Hash = GetHash(WordArray, WordLen);
-
-}
-
-int64_t GetHash(char WordArray[WordArray_Size], int* WordLen){
-
-    int64_t NewHash = 0, p_pow = 1;
-    const int p = 52;
-    int MaxLen = *WordLen-1;
-
-    for(int i = 0; i < MaxLen; i++){
-        NewHash += (int)WordArray[i] * p_pow;
-        p_pow *= p;
-    }
-
-    return NewHash;
-
-}
-
 int GetNextWord(FILE* StreamPointer, char WordArray[WordArray_Size]){
 
     int WordLen = 0;
@@ -203,6 +175,22 @@ int GetNextWord(FILE* StreamPointer, char WordArray[WordArray_Size]){
     }
 
     return WordLen;
+
+}
+
+void Calculate(FILE* StreamPointer){
+
+    int WordLen;
+    char WordArray[WordArray_Size];
+
+    struct HashPairArray* HashPairArray = calloc(1, sizeof(struct HashPairArray));
+    HashPairArray->Pointer = -1;
+
+    while((WordLen = GetNextWord(StreamPointer, WordArray)) > 1)
+        AddToHashPairArray(HashPairArray, WordArray, &WordLen);
+
+    PrintWords(HashPairArray);
+    FreeMemory(HashPairArray);
 
 }
 
@@ -264,26 +252,38 @@ int CloseFile(FILE* mStreamPointer) {
 
 }
 
-size_t strlcpy(char *dst, const char *src, size_t dsize) {
+int main(int argc, char* argv[])
+{
+    char PathToSrcFile[FileName_Size];
+    FILE* StreamPointer;
+    int Result = 0, CloseResult;
+    _Bool OperationDone = true;
 
-	const char *osrc = src;
-	size_t nleft = dsize;
+    GetFullPathToFile(argc, argv, PathToSrcFile);
+    StreamPointer = OpenFile(PathToSrcFile, "rb");
+    if(StreamPointer == NULL){
+        perror("Error open source file. Unknown file.\n");
+        OperationDone = false;
+    }
 
-	/* Copy as many bytes as will fit. */
-	if (nleft != 0) {
-		while (--nleft != 0) {
-			if ((*dst++ = *src++) == '\0')
-				break;
-		}
-	}
+    // Выполняем подсчет
+    if(OperationDone == true){
+        Calculate(StreamPointer);
+    }
+    else
+        Result = 1;
 
-	/* Not enough room in dst, add NUL and traverse rest of src. */
-	if (nleft == 0) {
-		if (dsize != 0)
-			*dst = '\0';		/* NUL-terminate dst */
-		while (*src++)
-			;
-	}
+    // Если все прошло хорошо, закрываем файлы.
+    CloseResult = CloseFile(StreamPointer);
+    if(CloseResult == EOF){
+        perror("Error close source file.\n");
+        OperationDone = false;
+    };
 
-	return(src - osrc - 1);	/* count does not include NUL */
+    if(OperationDone == true)
+        printf("\nCounting done!");
+
+    KeepOpenWindow();
+
+    return Result;
 }
