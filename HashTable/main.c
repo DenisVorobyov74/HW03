@@ -33,8 +33,9 @@ void PrintWords(struct HashPairArray* HashPairArray){
 
 void FreeMemory(struct HashPairArray* HashPairArray){
 
-    for(int i = 0; i <= HashPairArray->Pointer; i++){
-        free(HashPairArray->Array[i]->InitialWord);
+    for(int i = 0; i < HashPairArray->Len; i++){
+        if(i <= HashPairArray->Pointer)
+            free(HashPairArray->Array[i]->InitialWord);
         free(HashPairArray->Array[i]);
     }
 
@@ -102,6 +103,7 @@ void AddToHashPairArray(struct HashPairArray* HashPairArray, char WordArray[Word
 
     _Bool IsFound = false;
     int i;
+    int64_t Hash;
 
     // Выделяем место для новых элементов массива с шагом HashPairArray_AdditionStep
     if(HashPairArray->Len <= (HashPairArray->Pointer + 1)){
@@ -114,8 +116,9 @@ void AddToHashPairArray(struct HashPairArray* HashPairArray, char WordArray[Word
         HashPairArray->Len += HashPairArray_AdditionStep;
     }
 
+    Hash = GetHash(WordArray, WordLen);
     for(i = 0; i <= HashPairArray->Pointer; i++){
-        if(strncmp(HashPairArray->Array[i]->InitialWord, WordArray, *WordLen) == 0){
+        if(HashPairArray->Array[i]->Hash == Hash){
             IsFound = true;
             break;
         }
