@@ -8,33 +8,40 @@
 #define FileName_Size  256
 #define WordArray_Size 1024
 #define HashPairArray_AdditionStep 10
+#define Coefficient_K 1
 
 struct HashPair {
     char* InitialWord;
     int64_t Hash;
-    int count;
+    int Count;
 };
 
 struct HashPairArray{
 
     struct HashPair** Array;
-    int Len;
-    int Pointer;
+    size_t Count;
+    size_t FreeItems;
 
 };
 
+//////////////////////////////////////////////////////////////////
+/////////// Вспомогательные функции //////////////////////////////
+//////////////////////////////////////////////////////////////////
+// Выводит хранимые слова в консоль
 void PrintWords(struct HashPairArray* HashPairArray){
 
     printf("\n\n        Word's list:\n");
-    for(int i = 0; i <= HashPairArray->Pointer; i++)
-        printf("%s -- count - %d\n", HashPairArray->Array[i]->InitialWord, HashPairArray->Array[i]->count);
+    for(size_t i = 0; i < HashPairArray->Count; i++)
+        if(HashPairArray->Array[i] != NULL)
+            printf("%s -- count - %d\n", HashPairArray->Array[i]->InitialWord, HashPairArray->Array[i]->Count);
 
 }
 
+// Освобождает взятую в процессе выполнения программы память
 void FreeMemory(struct HashPairArray* HashPairArray){
 
-    for(int i = 0; i < HashPairArray->Len; i++){
-        if(i <= HashPairArray->Pointer)
+    for(size_t i = 0; i < HashPairArray->Count; i++){
+        if(HashPairArray->Array[i] != 0)
             free(HashPairArray->Array[i]->InitialWord);
         free(HashPairArray->Array[i]);
     }
@@ -44,6 +51,7 @@ void FreeMemory(struct HashPairArray* HashPairArray){
 
 }
 
+// Кастумная функция копирования строк
 size_t strlcpy(char *dst, const char *src, size_t dsize) {
 
 	const char *osrc = src;
@@ -68,119 +76,19 @@ size_t strlcpy(char *dst, const char *src, size_t dsize) {
 	return(src - osrc - 1);	/* count does not include NUL */
 }
 
-int64_t GetHash(char WordArray[WordArray_Size], int* WordLen){
+// Вычисляет значение хэша
+int64_t GetHash(char WordArray[WordArray_Size], size_t* WordLen){
 
     int64_t NewHash = 0, p_pow = 1;
     const int p = 52;
-    int MaxLen = *WordLen-1;
+    size_t MaxLen = *WordLen-1;
 
-    for(int i = 0; i < MaxLen; i++){
+    for(size_t i = 0; i < MaxLen; i++){
         NewHash += (int)WordArray[i] * p_pow;
         p_pow *= p;
     }
 
     return NewHash;
-
-}
-
-void AddNewWord(struct HashPairArray* HashPairArray, char WordArray[WordArray_Size], int* WordLen){
-
-    struct HashPair* Temp = calloc(1, sizeof(struct HashPair));
-
-    HashPairArray->Pointer++;
-    HashPairArray->Array[HashPairArray->Pointer] = Temp;
-
-    Temp->count++;
-
-    Temp->InitialWord = malloc((*WordLen) * sizeof(int));
-    strncpy(Temp->InitialWord, WordArray, *WordLen);
-
-    Temp->Hash = GetHash(WordArray, WordLen);
-
-}
-
-void AddToHashPairArray(struct HashPairArray* HashPairArray, char WordArray[WordArray_Size], int* WordLen){
-
-    _Bool IsFound = false;
-    int i;
-    int64_t Hash;
-
-    // Выделяем место для новых элементов массива с шагом HashPairArray_AdditionStep
-    if(HashPairArray->Len <= (HashPairArray->Pointer + 1)){
-
-        if(HashPairArray->Len == 0)
-            HashPairArray->Array = calloc(HashPairArray_AdditionStep, sizeof(struct HashPair*));
-        else
-            HashPairArray->Array = realloc(HashPairArray->Array, (HashPairArray->Len + HashPairArray_AdditionStep) * sizeof(struct HashPair*));
-
-        HashPairArray->Len += HashPairArray_AdditionStep;
-    }
-
-    Hash = GetHash(WordArray, WordLen);
-    for(i = 0; i <= HashPairArray->Pointer; i++){
-        if(HashPairArray->Array[i]->Hash == Hash){
-            IsFound = true;
-            break;
-        }
-    }
-
-    // Если очередное слово уже содержится в массиве слов, то добавляем 1
-    if(IsFound)
-        HashPairArray->Array[i]->count++;
-    else{
-    // Если это новое слово, то заносим его в массив.
-        AddNewWord(HashPairArray, WordArray, WordLen);
-    }
-
-}
-
-int GetNextWord(FILE* StreamPointer, char WordArray[WordArray_Size]){
-
-    int WordLen = 0;
-    int NewChar;
-    int MaxLen = WordArray_Size - 1;
-
-    while((NewChar = fgetc(StreamPointer)) != EOF){
-
-        // Символы-разделители слов.
-        if(NewChar == ' ' || NewChar == ',' || NewChar == '.' || NewChar == '(' || NewChar == ')' ||
-           NewChar == '\n' || NewChar == '\t' || NewChar == '[' || NewChar == ']'){
-
-            if(WordLen == 0)
-                continue;
-            else
-                break;
-        }
-
-        WordArray[WordLen] = (char)NewChar;
-        WordLen++;
-
-        if(WordLen == MaxLen)
-            break;
-    }
-
-    if(WordLen > 0) {
-        WordArray[WordLen] = '\0';
-        WordLen++;
-    }
-
-    return WordLen;
-
-}
-
-void Calculate(FILE* StreamPointer){
-
-    int WordLen;
-    char WordArray[WordArray_Size];
-
-    struct HashPairArray* HashPairArray = calloc(1, sizeof(struct HashPairArray));
-    HashPairArray->Pointer = -1;
-
-    while((WordLen = GetNextWord(StreamPointer, WordArray)) > 1)
-        AddToHashPairArray(HashPairArray, WordArray, &WordLen);
-
-    PrintWords(HashPairArray);
-    FreeMemory(HashPairArray);
 
 }
 
@@ -242,8 +150,195 @@ int CloseFile(FILE* mStreamPointer) {
 
 }
 
-int main(int argc, char* argv[])
-{
+//////////////////////////////////////////////////////////////////
+/////////// Основные функции //////////////////////////////
+//////////////////////////////////////////////////////////////////
+
+void AddNewWord(struct HashPairArray* HashPairArray, char WordArray[WordArray_Size], size_t* WordLen, const int64_t Hash, const int Ind){
+
+    const int MaxInd = HashPairArray->Count-1;
+    int NewInd = Ind;
+    int Attempts = HashPairArray->Count;
+    _Bool IsInsertDone = false;
+
+    // С начала пробуем разместить слово в уже имеющиеся элементы
+    do{
+        NewInd += Coefficient_K;
+        if(NewInd > MaxInd)
+            NewInd = 0;
+
+        if(HashPairArray->Array[NewInd] != NULL &&
+           HashPairArray->Array[NewInd]->Hash == Hash &&
+           strncmp(HashPairArray->Array[NewInd]->InitialWord, WordArray, (*WordLen)-1) == 0){
+
+           HashPairArray->Array[NewInd]->Count++;
+           Attempts = 1;
+           IsInsertDone = true;
+        }
+        Attempts--;
+    }while(Attempts>0);
+
+    // Если это действительно новое слово - создаем новый элемент массива
+    if(!IsInsertDone){
+        NewInd = Ind;
+
+        struct HashPair* NewHashPair = malloc(sizeof(struct HashPair));
+
+        NewHashPair->InitialWord = malloc((*WordLen) * sizeof(int));
+        strncpy(NewHashPair->InitialWord, WordArray, *WordLen);
+        NewHashPair->Hash  = Hash;
+        NewHashPair->Count = 1;
+
+        do{
+            if(HashPairArray->Array[NewInd] == NULL){
+                HashPairArray->Array[NewInd] = NewHashPair;
+                IsInsertDone = true;
+                HashPairArray->FreeItems--;
+            }
+            else {
+                NewInd += Coefficient_K;
+                if(NewInd > MaxInd)
+                    NewInd = 0;
+            }
+        }while(!IsInsertDone);
+    }
+}
+
+// Метод разрешает коллизиции. Вычисляет свободное место в массиве по Coefficient_K при перестроении таблицы
+void InsertHashPairItem(struct HashPairArray* TempArray, struct HashPair* HashPair, const int Ind){
+
+    const int MaxInd = TempArray->Count-1;
+    int NewInd = Ind;
+    _Bool IsInsertDone = false;
+
+    do{
+        NewInd += Coefficient_K;
+        if(NewInd > MaxInd)
+            NewInd = 0;
+
+        if(TempArray->Array[NewInd] == NULL){
+            TempArray->Array[NewInd] = HashPair;
+            IsInsertDone = true;
+            TempArray->FreeItems--;
+        }
+
+    }while(!IsInsertDone);
+
+}
+
+void IncreaseArraySize(struct HashPairArray** HashPairArray){
+
+    int Ind, LastCount = 0;
+    struct HashPairArray* TempArray  = malloc(sizeof(struct HashPairArray));
+    struct HashPairArray* LocPointer = *HashPairArray;
+
+    if(LocPointer != NULL)
+        LastCount = LocPointer->Count;
+
+    TempArray->FreeItems = LastCount + HashPairArray_AdditionStep;
+    TempArray->Count     = LastCount + HashPairArray_AdditionStep;
+    TempArray->Array     = calloc(TempArray->Count, sizeof(struct HashPair*));
+
+    if(LocPointer != NULL) {
+
+        for(size_t i = 0; i < LocPointer->Count; i++){
+            Ind = LocPointer->Array[i]->Hash % TempArray->Count;
+            if(LocPointer->Array[i]->Hash == 278596)
+                LocPointer->Array[i]->Hash = 278596;
+            if(TempArray->Array[Ind] == 0){
+                TempArray->Array[Ind] = LocPointer->Array[i];
+                TempArray->FreeItems--;
+            }
+            else
+                InsertHashPairItem(TempArray, LocPointer->Array[i], Ind);
+        }
+        free(*HashPairArray);
+    }
+
+    *HashPairArray = TempArray;
+
+}
+
+void AddToHashPairArray(struct HashPairArray** LocPointer, char WordArray[WordArray_Size], size_t* WordLen){
+
+    int Ind;
+    int64_t Hash;
+    struct HashPairArray* HashPairArray = *LocPointer;
+
+    if(HashPairArray == 0 || HashPairArray->FreeItems == 0)
+        IncreaseArraySize(&HashPairArray);
+
+    Hash = GetHash(WordArray, WordLen);
+    Ind  = Hash % HashPairArray->Count;
+    if(Hash == 278596)
+       Hash = 278596;
+    // Порядок условий расположен от простого к сложному; последнее условие - самое "тяжелое" - сравнение строк
+    // Поиск места хранения идет через индекс. Сравниваем значение хэша и воизбежении коллизий сравниванием строки
+    if(HashPairArray->Array[Ind] != NULL &&                                             // Если данный содержит какое-то значение
+       HashPairArray->Array[Ind]->Hash == Hash &&                                       // Если хэши значений совпадают
+       strncmp(HashPairArray->Array[Ind]->InitialWord, WordArray, (*WordLen)-1) == 0){  // Если строки равны
+
+        // Если очередное слово уже содержится в массиве слов, то добавляем 1
+        HashPairArray->Array[Ind]->Count++;
+    }else{
+
+        // Если это новое слово, то заносим его в массив.
+        AddNewWord(HashPairArray, WordArray, WordLen, Hash, Ind);
+    }
+
+    *LocPointer = HashPairArray;
+}
+
+int GetNextWord(FILE* StreamPointer, char WordArray[WordArray_Size]){
+
+    int WordLen = 0;
+    int NewChar;
+    int MaxLen = WordArray_Size - 1;
+
+    while((NewChar = fgetc(StreamPointer)) != EOF){
+
+        // Символы-разделители слов.
+        if(NewChar == ' ' || NewChar == ',' || NewChar == '.' || NewChar == '(' || NewChar == ')' ||
+           NewChar == '\n' || NewChar == '\t' || NewChar == '[' || NewChar == ']'){
+
+            if(WordLen == 0)
+                continue;
+            else
+                break;
+        }
+
+        WordArray[WordLen] = (char)NewChar;
+        WordLen++;
+
+        if(WordLen == MaxLen)
+            break;
+    }
+
+    if(WordLen > 0) {
+        WordArray[WordLen] = '\0';
+        WordLen++;
+    }
+
+    return WordLen;
+
+}
+
+void Calculate(FILE* StreamPointer){
+
+    size_t WordLen;
+    char WordArray[WordArray_Size];
+
+    struct HashPairArray* HashPairArray = 0;
+
+    while((WordLen = GetNextWord(StreamPointer, WordArray)) > 1)
+        AddToHashPairArray(&HashPairArray, WordArray, &WordLen);
+
+    PrintWords(HashPairArray);
+    FreeMemory(HashPairArray);
+
+}
+
+int main(int argc, char* argv[]){
     char PathToSrcFile[FileName_Size];
     FILE* StreamPointer;
     int Result = 0, CloseResult;

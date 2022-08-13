@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1658367095 source:/home/denis/GitHub/HW03/HashTable/main.c
+1660350972 source:/home/denis/GitHub/HW03/HashTable/main.c
 	<stdio.h>
 	<stdlib.h>
 	<sys/stat.h>
